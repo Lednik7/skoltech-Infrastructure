@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "skoltech-infrastructure"
+version = "0.1.0"
+description = ""
+authors = ["werserk <werserk@inbox.ru>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[tool.poetry.group.dev.dependencies]
+jupyter = "^1.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
