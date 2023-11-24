@@ -9,7 +9,7 @@ class AbstractModel:
         self.model = ...
         pass
 
-    def preprocess(self, image: np.ndarray) -> Any[np.ndarray, torch.Tensor]:
+    def preprocess(self, image: np.ndarray):
         pass
 
     def postprocess(self, x) -> np.ndarray:

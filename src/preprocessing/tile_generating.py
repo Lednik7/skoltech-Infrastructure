@@ -1,5 +1,4 @@
 import os
-from itertools import product
 
 from PIL import Image, ImageOps
 
@@ -27,17 +26,33 @@ def split_image(image_path, mask_path, output_folder, tile_size=(256, 256), over
     os.makedirs(image_dir, exist_ok=True)
     os.makedirs(mask_dir, exist_ok=True)
 
-    for i, j in product(range(0, image.width - tile_size[0] + 1, step_size),
-                        range(0, image.height - tile_size[1] + 1, step_size)):
-        box = (i, j, i + tile_size[0], j + tile_size[1])
-        image_tile = image.crop(box)
-        mask_tile = mask.crop(box)
+    steps_x = image.size[0] // step_size
+    if image.size[0] % step_size != 0:
+        steps_x += 1
+    steps_y = image.size[1] // step_size
+    if image.size[1] % step_size != 0:
+        steps_y += 1
 
-        image_tile = add_padding_tile(image_tile, tile_size)
-        mask_tile = add_padding_tile(mask_tile, tile_size)
+    total_count = steps_x * steps_y
 
-        image_tile.save(f"{image_dir}/tile_{i}_{j}.png")
-        mask_tile.save(f"{mask_dir}/mask_tile_{i}_{j}.png")
+    total_true_count = 0
+    for i in range(steps_x):
+        for j in range(steps_y):
+            left_top = (i * step_size, j * step_size)
+            right_bottom = ((i + 1) * step_size, (j + 1) * step_size)
+
+            image_tile = image.crop(left_top + right_bottom)
+            mask_tile = mask.crop(left_top + right_bottom)
+
+            image_tile = add_padding_tile(image_tile, tile_size)
+            mask_tile = add_padding_tile(mask_tile, tile_size)
+
+            image_tile.save(f"{image_dir}/tile_{left_top[0]}_{left_top[1]}.png")
+            mask_tile.save(f"{mask_dir}/mask_tile_{left_top[0]}_{left_top[1]}.png")
+
+            total_true_count += 1
+
+    print(f"Total count: {total_count} / True count: {total_true_count}")
 
 
 if __name__ == '__main__':
