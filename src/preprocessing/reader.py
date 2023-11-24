@@ -1,6 +1,6 @@
 import os
 
-import cv2
+from PIL import Image
 
 
 class Reader:
@@ -24,12 +24,10 @@ class Reader:
         return os.path.join(self.mask_path, self.get_mask_name(idx))
 
     def read_mask(self, idx: int):
-        image = cv2.imread(self.get_mask_path(idx))
-        return image
+        return Image.open(self.get_mask_path(idx))
 
     def read_image(self, idx: int):
-        image = cv2.imread(self.get_image_path(idx))
-        return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        return Image.open(self.get_image_path(idx))
 
     def read_sample(self, idx: int):
         return self.read_image(idx), self.read_mask(idx)

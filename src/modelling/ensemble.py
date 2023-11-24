@@ -1,6 +1,7 @@
 from typing import Dict, Optional
 
 import numpy as np
+
 from src.modelling import AbstractModel
 
 
@@ -19,5 +20,5 @@ class Ensemble:
             return np.mean(np.stack(predictions), axis=0)
         return np.stack(predictions)
 
-    def __call__(self, image: np.ndarray, mean: bool = True) -> np.ndarray:
-        return self.predict(image, mean)
+    def __call__(self, image: np.ndarray, return_average: bool = True) -> np.ndarray:
+        return self.predict(image, return_average)
