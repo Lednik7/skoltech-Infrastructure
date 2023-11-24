@@ -6,7 +6,7 @@ authors = ["Профилактика"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.10,<3.12"
 numpy = "^1.26.2"
 pillow = "^10.1.0"
 imageio = "^2.33.0"
