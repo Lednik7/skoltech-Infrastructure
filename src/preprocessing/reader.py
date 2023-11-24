@@ -24,10 +24,12 @@ class Reader:
         return os.path.join(self.mask_path, self.get_mask_name(idx))
 
     def read_mask(self, idx: int):
-        return cv2.imread(self.get_mask_path(idx))
+        image = cv2.imread(self.get_mask_path(idx))
+        return image
 
     def read_image(self, idx: int):
-        return cv2.imread(self.get_image_path(idx))
+        image = cv2.imread(self.get_image_path(idx))
+        return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     def read_sample(self, idx: int):
         return self.read_image(idx), self.read_mask(idx)
