@@ -1,48 +1,114 @@
+import os
+import time
+
 import torch
+import tqdm
 from tqdm.notebook import tqdm
 
 
-def train(model, train_loader, optimizer, scheduler, criterion, metric, device):
+# helping function to normal visualisation in Colaboratory
+def foo_():
+    time.sleep(0.3)
+
+
+def train_epoch(model, train_dl, criterion, metric, optimizer, scheduler, device):
     model.train()
-    total_score = 0
-    total_loss = 0
-    for inputs, targets in tqdm(train_loader):
-        inputs, targets = inputs.to(device), targets.to(device)
+    loss_sum = 0
+    score_sum = 0
+    for X, y in tqdm(train_dl):
+        X = X.to(device)
+        y = y.to(device)
+
         optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, targets)
-        total_loss += loss
-        threshold = 0.5
-        outputs = (outputs > threshold).float()
-        total_score += metric(outputs, targets)
+        output = model(X)
+        loss = criterion(output, y)
         loss.backward()
         optimizer.step()
         scheduler.step()
-    return {"loss": total_loss / len(train_loader),
-            "score": total_score / len(train_loader)}
+
+        loss = loss.item()
+        score = metric(output > 0.5, y).mean().item()
+        loss_sum += loss
+        score_sum += score
+    return loss_sum / len(train_dl), score_sum / len(train_dl)
 
 
-def validate(model, val_loader, criterion, metric, device):
+def eval_epoch(model, val_dl, criterion, metric, device):
     model.eval()
-    total_loss = 0
-    total_score = 0
-    with torch.no_grad():
-        for inputs, targets in tqdm(val_loader):
-            inputs, targets = inputs.to(device), targets.to(device)
-            outputs = model(inputs)
-            total_loss += criterion(outputs, targets)
-            total_score += metric(outputs, targets)
-    return {"loss": total_loss / len(val_loader),
-            "score": total_score / len(val_loader)}
+    loss_sum = 0
+    score_sum = 0
+    for X, y in tqdm(val_dl):
+        X = X.to(device)
+        y = y.to(device)
+
+        with torch.no_grad():
+            output = model(X)
+            loss = criterion(output, y).item()
+            score = metric(output > 0.5, y).mean().item()
+            loss_sum += loss
+            score_sum += score
+    return loss_sum / len(val_dl), score_sum / len(val_dl)
 
 
-def fit_loop(model, train_loader, val_loader, optimizer, scheduler, criterion, metric,
-             epochs,
-             device):
+def run(model,
+        train_loader,
+        val_loader,
+        optimizer,
+        scheduler,
+        criterion,
+        metric,
+        epochs,
+        device,
+        weights_path='../artifacts/weights/',
+        save_name='model_name.pth',
+        max_early_stopping=3):
+    if not os.path.exists(weights_path):
+        os.makedirs(weights_path)
+        print(f"{weights_path} created successfully")
+
+    save_path = os.path.join(weights_path, save_name)
+
+    best_val_loss = 1e3
+    last_train_loss = 0
+    last_val_loss = 1e3
+    early_stopping_flag = 0
+    best_state_dict = model.state_dict()
     for epoch in range(1, epochs + 1):
-        train_stats = train(model, train_loader, optimizer, scheduler, criterion,
-                            metric, device)
-        print(f"Epoch {epoch}")
-        print(f"Train loss: {train_stats['loss']}, score: {train_stats['score']}")
-        val_stats = validate(model, val_loader, criterion, metric, device)
-        print(f"Val loss: {val_stats['loss']}, score: {val_stats['score']}")
+        print(f'Epoch #{epoch}')
+
+        # <<<<< TRAIN >>>>>
+        train_loss, train_score = train_epoch(model, train_loader,
+                                              criterion, metric,
+                                              optimizer, scheduler, device)
+        print('      Score    |    Loss')
+        print(f'Train: {train_score:.6f} | {train_loss:.6f}')
+
+        # <<<<< EVAL >>>>>
+        val_loss, val_score = eval_epoch(model, val_loader,
+                                         criterion, metric, device)
+        print(f'Val: {val_score:.6f} | {val_loss:.6f}', end='\n\n')
+        metrics = {'train_score': train_score,
+                   'train_loss': train_loss,
+                   'val_score': val_score,
+                   'val_loss': val_loss,
+                   'lr': scheduler.get_last_lr()[-1]}
+
+        # saving best weights by loss
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            best_state_dict = model.state_dict()
+            torch.save(best_state_dict, save_path)
+
+        # weapon counter over-fitting
+        if train_loss < last_train_loss and val_loss > last_val_loss:
+            early_stopping_flag += 1
+        if early_stopping_flag == max_early_stopping:
+            print('<<< EarlyStopping >>>')
+            break
+
+        last_train_loss = train_loss
+        last_val_loss = val_loss
+
+    # loading best weights
+    model.load_state_dict(best_state_dict)
+    return model
