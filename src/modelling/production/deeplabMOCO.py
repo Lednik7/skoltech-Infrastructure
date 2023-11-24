@@ -24,6 +24,11 @@ class DeeplabMOCO(AbstractModel):
                 ToTensorV2(),
             ]
         )
+        self.post_transforms = A.Compose(
+            [
+                A.Resize(512, 512),
+            ]
+        )
 
     def preprocess(self, image: np.ndarray):
         image = self.transforms(image=image)["image"]
@@ -31,6 +36,7 @@ class DeeplabMOCO(AbstractModel):
 
     def postprocess(self, x: torch.Tensor) -> np.ndarray:
         x = x.squeeze(0).squeeze(0).detach().cpu().numpy()
+        x = self.post_transforms(image=x)["image"]
         return x
 
     def predict(self, image: np.ndarray) -> np.ndarray:

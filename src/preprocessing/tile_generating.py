@@ -1,61 +1,58 @@
 import os
 
-from PIL import Image, ImageOps
+import cv2
+import numpy as np
 
-Image.MAX_IMAGE_PIXELS = None
 
-
-def add_padding_tile(image, size):
-    pad_x = size - image.size[0]
-    pad_y = size - image.size[1]
+def add_padding_tile(image, tile_size):
+    pad_x = tile_size - image.shape[1]
+    pad_y = tile_size - image.shape[0]
 
     if pad_x > 0 or pad_y > 0:
-        padding = (0, 0, pad_x, pad_y)
-        return ImageOps.expand(image, padding)
+        return cv2.copyMakeBorder(image, 0, pad_y, 0, pad_x, cv2.BORDER_CONSTANT)
     return image
 
 
-def split_image(image: Image, mask: Image, tile_size=256, overlap=0,
-                output_folder=None):
+def split_image(image, tile_size=256, overlap=0, output_folder=None, mask=None):
     if overlap != 0:
         raise NotImplementedError()
     step_size = int(tile_size * (1 - overlap))
 
-    if output_folder is not None:
+    steps_x = (image.shape[1] + step_size - 1) // step_size
+    steps_y = (image.shape[0] + step_size - 1) // step_size
+
+    if output_folder:
         image_dir = f"{output_folder}/images"
-        mask_dir = f"{output_folder}/masks"
+        mask_dir = f"{output_folder}/masks" if mask is not None else None
         os.makedirs(image_dir, exist_ok=True)
-        os.makedirs(mask_dir, exist_ok=True)
+        if mask_dir:
+            os.makedirs(mask_dir, exist_ok=True)
 
-    steps_x = image.size[0] // step_size
-    if image.size[0] % step_size != 0:
-        steps_x += 1
-    steps_y = image.size[1] // step_size
-    if image.size[1] % step_size != 0:
-        steps_y += 1
-
+    tiles = []
     for i in range(steps_x):
         for j in range(steps_y):
-            left_top = (i * step_size, j * step_size)
-            right_bottom = (left_top[0] + tile_size, left_top[1] + tile_size)
-
-            image_tile = image.crop(left_top + right_bottom)
-            mask_tile = mask.crop(left_top + right_bottom)
-
+            x, y = i * step_size, j * step_size
+            image_tile = image[y:y + tile_size, x:x + tile_size]
             image_tile = add_padding_tile(image_tile, tile_size)
-            mask_tile = add_padding_tile(mask_tile, tile_size)
 
-            if output_folder is not None:
-                image_tile.save(f"{image_dir}/tile_{left_top[0]}_{left_top[1]}.png")
-                mask_tile.save(f"{mask_dir}/mask_tile_{left_top[0]}_{left_top[1]}.png")
+            if mask is not None:
+                mask_tile = mask[y:y + tile_size, x:x + tile_size]
+                mask_tile = add_padding_tile(mask_tile, tile_size)
+
+            if output_folder:
+                cv2.imwrite(f"{image_dir}/tile_{x}_{y}.png", image_tile)
+                if mask is not None:
+                    cv2.imwrite(f"{mask_dir}/mask_tile_{x}_{y}.png", mask_tile)
             else:
-                yield image_tile, mask_tile
+                tiles.append(
+                    (image_tile, mask_tile) if mask is not None else image_tile)
+    return tiles
 
 
-def merge_tiles(tiles: list, original_size, tile_size=256, overlap=0):
+def merge_tiles(tiles, original_size, tile_size=256, overlap=0):
     if overlap != 0:
         raise NotImplementedError()
-    image = Image.new('L', original_size)
+    image = np.zeros((original_size[0], original_size[1]), dtype=np.float32)
     step_size = int(tile_size * (1 - overlap))
 
     steps_x = original_size[0] // step_size
@@ -68,9 +65,16 @@ def merge_tiles(tiles: list, original_size, tile_size=256, overlap=0):
     k = 0
     for i in range(steps_x):
         for j in range(steps_y):
-            left_top = (i * step_size, j * step_size)
-            right_bottom = (left_top[0] + tile_size, left_top[1] + tile_size)
-            image.paste(tiles[k], left_top + right_bottom)
+            x, y = i * step_size, j * step_size
+
+            tile_width = min(tile_size, original_size[1] - x)
+            tile_height = min(tile_size, original_size[0] - y)
+
+            if tile_width <= 0 or tile_height <= 0:
+                continue
+
+            tile = tiles[k][:tile_height, :tile_width]
+            image[y:y + tile_height, x:x + tile_width] = tile
             k += 1
     return image
 
@@ -96,8 +100,8 @@ if __name__ == '__main__':
             shutil.rmtree(output_folder)
         os.makedirs(output_folder)
 
-        image = Image.open(image_path)
-        mask = Image.open(mask_path)
+        image = cv2.imread(image_path)
+        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
 
-        split_image(image, mask, tile_size=512,
-                    overlap=0, output_folder=output_folder)
+        split_image(image, tile_size=512,
+                    overlap=0, output_folder=output_folder, mask=mask)

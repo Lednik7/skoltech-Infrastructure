@@ -2,7 +2,7 @@ import numpy as np
 
 
 class AbstractModel:
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.model = ...
         pass
 

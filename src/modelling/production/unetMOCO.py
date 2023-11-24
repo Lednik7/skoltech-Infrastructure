@@ -24,13 +24,20 @@ class UnetMOCO(AbstractModel):
                 ToTensorV2(),
             ]
         )
+        self.post_transforms = A.Compose(
+            [
+                A.Resize(512, 512),
+            ]
+        )
 
     def preprocess(self, image: np.ndarray):
         image = self.transforms(image=image)["image"]
         return image.unsqueeze(0)
 
     def postprocess(self, x: torch.Tensor) -> np.ndarray:
-        return x.squeeze(0).squeeze(0).detach().cpu().numpy()
+        x = x.squeeze(0).squeeze(0).detach().cpu().numpy()
+        x = self.post_transforms(image=x)["image"]
+        return x
 
     def predict(self, image: np.ndarray) -> np.ndarray:
         inputs = self.preprocess(image)
