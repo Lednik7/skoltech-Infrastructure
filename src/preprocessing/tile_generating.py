@@ -1,30 +1,24 @@
 import os
 from itertools import product
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 Image.MAX_IMAGE_PIXELS = None
 
 
-def add_padding(image, tile_size, overlap):
-    pad_x = int(tile_size[0] * (1 - overlap) / 2)
-    pad_y = int(tile_size[1] * (1 - overlap) / 2)
+def add_padding_tile(image, size):
+    pad_x = size[0] - image.size[0]
+    pad_y = size[1] - image.size[1]
 
-    new_width = image.width + 2 * pad_x
-    new_height = image.height + 2 * pad_y
-
-    padded_image = Image.new('RGB', (new_width, new_height))
-    padded_image.paste(image, (pad_x, pad_y))
-
-    return padded_image
+    if pad_x > 0 or pad_y > 0:
+        padding = (0, 0, pad_x, pad_y)
+        return ImageOps.expand(image, padding)
+    return image
 
 
 def split_image(image_path, mask_path, output_folder, tile_size=(256, 256), overlap=0):
     image = Image.open(image_path)
     mask = Image.open(mask_path)
-
-    image = add_padding(image, tile_size, overlap)
-    mask = add_padding(mask, tile_size, overlap)
 
     step_size = int(tile_size[0] * (1 - overlap))
 
@@ -39,34 +33,11 @@ def split_image(image_path, mask_path, output_folder, tile_size=(256, 256), over
         image_tile = image.crop(box)
         mask_tile = mask.crop(box)
 
+        image_tile = add_padding_tile(image_tile, tile_size)
+        mask_tile = add_padding_tile(mask_tile, tile_size)
+
         image_tile.save(f"{image_dir}/tile_{i}_{j}.png")
         mask_tile.save(f"{mask_dir}/mask_tile_{i}_{j}.png")
-
-
-def merge_tiles(input_folder, original_size, tile_size=(256, 256), overlap=0):
-    step_size = int(tile_size[0] * (1 - overlap))
-    pad_x = int(tile_size[0] * (1 - overlap) / 2)
-    pad_y = int(tile_size[1] * (1 - overlap) / 2)
-
-    new_width = original_size[0] + 2 * pad_x
-    new_height = original_size[1] + 2 * pad_y
-
-    merged_image = Image.new('RGB', (new_width, new_height))
-
-    for i, j in product(range(0, new_width - tile_size[0] + 1, step_size),
-                        range(0, new_height - tile_size[1] + 1, step_size)):
-        try:
-            tile = Image.open(f"{input_folder}/images/tile_{i}_{j}.png")
-            merged_image.paste(tile, (i, j), tile)
-        except FileNotFoundError:
-            print(f"No tile found for position ({i}, {j})")
-            continue
-
-    # Crop out the padding
-    merged_image = merged_image.crop(
-        (pad_x, pad_y, original_size[0] + pad_x, original_size[1] + pad_y))
-
-    return merged_image
 
 
 if __name__ == '__main__':

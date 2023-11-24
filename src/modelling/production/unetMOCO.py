@@ -4,7 +4,7 @@ import segmentation_models_pytorch as smp
 import torch
 from albumentations.pytorch import ToTensorV2
 
-from src.modelling.ensemble import AbstractModel
+from src.modelling import AbstractModel
 
 
 class UnetMOCO(AbstractModel):
