@@ -12,6 +12,8 @@ def train(model, train_loader, optimizer, scheduler, criterion, metric, device):
         outputs = model(inputs)
         loss = criterion(outputs, targets)
         total_loss += loss
+        threshold = 0.5
+        outputs = (outputs > threshold).float()
         total_score += metric(outputs, targets)
         loss.backward()
         optimizer.step()
