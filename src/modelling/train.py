@@ -111,4 +111,4 @@ def run(model,
 
     # loading best weights
     model.load_state_dict(best_state_dict)
-    return model
+    return model, best_val_loss
