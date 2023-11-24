@@ -16,8 +16,8 @@ from building_footprint_segmentation.utils.py_network import (
     to_input_image_tensor,
     add_extra_dimension,
     convert_tensor_to_numpy,
-    adjust_model,
-)
+    load_parallel_model,
+    adjust_model,)
 from building_footprint_segmentation.utils.operations import handle_image_size
 
 
@@ -65,14 +65,14 @@ def extract(original_image):
     return prediction_binary, prediction_3_channels, dst
 
 
-def run(image_path):
-    original_image = cv2.imread(image_path)
-    original_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
+def predict_from_path(image_path):
+    image = cv2.imread(image_path)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    set_model_weights()
-    # PARALLELIZE the model if gpu available
-    # model = load_parallel_model(model)
+    prediction_binary, prediction_3_channels, dst = predict(image)
 
-    prediction_binary, prediction_3_channels, dst = extract(original_image)
-    # imsave(f"{os.path.basename(image_path)}", prediction_binary)
+    return prediction_binary, prediction_3_channels, dst
+
+def predict(image):
+    prediction_binary, prediction_3_channels, dst = extract(image)
     return prediction_binary, prediction_3_channels, dst
