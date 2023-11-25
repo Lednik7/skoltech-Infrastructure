@@ -1,3 +1,4 @@
+import numpy as np
 import torch.nn as nn
 
 
@@ -26,7 +27,6 @@ class DiceLoss(nn.Module):
         super(DiceLoss, self).__init__()
 
     def forward(self, inputs, targets, smooth=1):
-        # flatten label and prediction tensors
         inputs = inputs.view(-1)
         targets = targets.view(-1)
 
@@ -42,3 +42,16 @@ class DiceMetric:
 
     def __call__(self, y_pred, y_true):
         return 1 - self.dice_loss(y_pred, y_true)
+
+
+def f1_score(y_true, y_pred):
+    tp = np.sum(y_true & y_pred)
+    fp = np.sum(~y_true & y_pred)
+    fn = np.sum(y_true & ~y_pred)
+
+    epsilon = 1e-7
+
+    precision = tp / (tp + fp + epsilon)
+    recall = tp / (tp + fn + epsilon)
+
+    return 2 * precision * recall / (precision + recall + epsilon)

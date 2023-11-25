@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm.notebook import tqdm
 
 from src.modelling.ensemble import Ensemble
 from src.preprocessing.tile_generating import merge_tiles, split_image
@@ -13,5 +14,5 @@ class Predictor:
 
     def predict(self, image: np.ndarray) -> np.ndarray:
         tiles = split_image(image, tile_size=512, overlap=0)
-        predictions = [self.predict_tile(tile) for tile in tiles]
+        predictions = [self.predict_tile(tile) for tile in tqdm(tiles)]
         return merge_tiles(predictions, image.shape[:2], tile_size=512, overlap=0)

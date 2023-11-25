@@ -28,12 +28,14 @@ class Reader:
 
     def read_mask(self, idx: int):
         if self.read_type == "opencv":
-            return cv2.imread(self.get_mask_path(idx), cv2.IMREAD_GRAYSCALE)
+            image = cv2.imread(self.get_mask_path(idx))
+            return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         return Image.open(self.get_mask_path(idx))
 
     def read_image(self, idx: int):
         if self.read_type == "opencv":
-            return cv2.imread(self.get_image_path(idx), cv2.IMREAD_COLOR)
+            image = cv2.imread(self.get_image_path(idx))
+            return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return Image.open(self.get_image_path(idx))
 
     def read_sample(self, idx: int):
