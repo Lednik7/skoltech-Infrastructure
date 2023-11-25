@@ -1,8 +1,8 @@
 from typing import List
 
+import cv2
 import numpy as np
 from tqdm.notebook import tqdm
-import cv2
 
 from src.modelling.ensemble import Ensemble
 from src.modelling.metrics import f1_score
@@ -28,15 +28,23 @@ class Predictor:
             self,
             images: List[np.ndarray],
             masks: List[np.ndarray],
-            threshold: float
+            threshold: float,
+            calc_background: bool = False
     ) -> float:
         assert 0 <= threshold <= 1
         predictions = self.predict_many(images)
         total_score = 0
+        if calc_background:
+            total_bg_score = 0
         for pred, mask in zip(predictions, masks):
             binary_pred = (pred > threshold).astype(np.int16)
-            f1_score(mask, binary_pred)
+            if calc_background:
+                bg_mask = 1 - mask
+                bg_pred = 1 - binary_pred
+                total_bg_score += f1_score(bg_mask, bg_pred) / len(masks)
             total_score += f1_score(mask, binary_pred) / len(masks)
+        if calc_background:
+            return total_score, total_bg_score
         return total_score
 
 
