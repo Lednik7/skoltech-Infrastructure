@@ -76,6 +76,10 @@ make setup
 
 `torchgeo_baseline.ipynb` - train single segmentation model.
 
+
+## Models
+Download the models from the [link](https://drive.google.com/drive/folders/1zZGYV1oMxy29YY54r_pP9HmrDF7OSH5V?usp=drive_link) and unpack the contents in artifacts/weights
+
 ## Contact
 If something go wrong please contact me:
 `tg: @werserk`
