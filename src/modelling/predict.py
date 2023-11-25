@@ -1,6 +1,10 @@
 from typing import List
 
+import cv2
 import numpy as np
+import torch
+import ttach as tta
+from albumentations.pytorch import ToTensorV2
 from tqdm.notebook import tqdm
 
 from src.modelling.ensemble import Ensemble
@@ -37,3 +41,37 @@ class Predictor:
             f1_score(mask, binary_pred)
             total_score += f1_score(mask, binary_pred) / len(masks)
         return total_score
+
+
+class TTAPredictor(Predictor):
+    basic_tta = tta.Compose([
+        tta.HorizontalFlip(),
+        tta.VerticalFlip(),
+        # tta.Rotate90(angles=[0, 90, 180, 270]),
+    ])
+
+    def __init__(self, model: Ensemble, tta_transforms=basic_tta):
+        super().__init__(model)
+        self.tta_transforms = tta_transforms
+
+    def predict(self, image: np.ndarray) -> np.ndarray:
+        preds = []
+        for i, transformer in enumerate(self.tta_transforms):
+            image = ToTensorV2(p=1.0)(image=image)["image"]
+            image = image.unsqueeze(0)
+            image = transformer.augment_image(image)
+            image = image.squeeze(0)
+            image = image.numpy().transpose(1, 2, 0)
+
+            cv2.imwrite(f'test_{i}.png', image)
+
+            pred = super().predict(image)
+
+            pred = torch.from_numpy(pred)
+            pred = pred.unsqueeze(0).unsqueeze(0)
+            pred = transformer.deaugment_mask(pred)
+            pred = pred.squeeze(0).squeeze(0).numpy()
+            preds.append(pred)
+
+            print(image.shape, pred.shape)
+        return np.mean(preds, axis=0)
