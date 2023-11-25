@@ -2,6 +2,7 @@ from typing import List
 
 import numpy as np
 from tqdm.notebook import tqdm
+import cv2
 
 from src.modelling.ensemble import Ensemble
 from src.modelling.metrics import f1_score
@@ -37,3 +38,29 @@ class Predictor:
             f1_score(mask, binary_pred)
             total_score += f1_score(mask, binary_pred) / len(masks)
         return total_score
+
+
+def create_shift(image: np.ndarray, tile_size: int) -> np.ndarray:
+    shifted_image = cv2.copyMakeBorder(image, tile_size // 2, 0, tile_size // 2, 0,
+                                       cv2.BORDER_CONSTANT)
+    return shifted_image
+
+
+class ShiftedPredictor(Predictor):
+    def predict(self, image: np.ndarray) -> np.ndarray:
+        tile_size = 512
+        tiles = split_image(image, tile_size=tile_size, overlap=0)
+        predictions = [self.predict_tile(tile) for tile in tqdm(tiles)]
+        results = merge_tiles(predictions, image.shape[:2], tile_size=tile_size,
+                              overlap=0)
+
+        shifted_image = create_shift(image, tile_size)
+        shifted_tiles = split_image(shifted_image, tile_size=tile_size,
+                                    overlap=0)
+        shifted_predictions = [self.predict_tile(tile) for tile in tqdm(shifted_tiles)]
+        shifted_results = merge_tiles(shifted_predictions, shifted_image.shape[:2],
+                                      tile_size=tile_size,
+                                      overlap=0)
+        shifted_results = shifted_results[tile_size // 2:, tile_size // 2:]
+        assert results.shape == shifted_results.shape
+        return (results + shifted_results) / 2
