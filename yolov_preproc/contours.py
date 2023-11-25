@@ -77,15 +77,17 @@ def create_contour(mask: np.array,
 
 
 def remove_mini_house(mask, trch=1):
+    count = 0
     new_mask = np.zeros(mask.shape)
     contours = create_contour(mask)
     for contour in tqdm(contours[1]):
         if contour.area < trch:
-            print('remove')
+            count += 1
             continue
 
         new_mask += rasterio.features.rasterize([contour], out_shape=mask.shape)
         # new_mask += calculate_area(contour, mask.shape)
         #
+    print(f'remove: {count} housees')
     return new_mask
 
