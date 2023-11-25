@@ -80,7 +80,12 @@ def remove_mini_house(mask, trch=1):
     count = 0
     new_mask = np.zeros(mask.shape)
     contours = create_contour(mask)
-    for contour in tqdm(contours[1]):
+    try:
+        x = list(contours.keys())[0]
+    except:
+        print('faild mask')
+        return mask
+    for contour in tqdm(contours[x]):
         if contour.area < trch:
             count += 1
             continue
