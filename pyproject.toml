@@ -15,6 +15,8 @@ scikit-learn = "^1.3.2"
 segmentation-models-pytorch = "^0.3.3"
 albumentations = "^1.3.1"
 building-footprint-segmentation = "^0.2.4"
+shapely = "^2.0.2"
+rasterio = "^1.3.9"
 
 
 [tool.poetry.group.dev.dependencies]
