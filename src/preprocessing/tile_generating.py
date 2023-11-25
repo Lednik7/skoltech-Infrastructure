@@ -63,8 +63,8 @@ def merge_tiles(tiles, original_size, tile_size=256, overlap=0):
         steps_y += 1
 
     k = 0
-    for i in range(steps_x):
-        for j in range(steps_y):
+    for i in range(steps_y):
+        for j in range(steps_x):
             x, y = i * step_size, j * step_size
 
             tile_width = min(tile_size, original_size[1] - x)
