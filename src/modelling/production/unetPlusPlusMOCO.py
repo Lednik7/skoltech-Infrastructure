@@ -12,8 +12,8 @@ class unetPlusPlusMOCO(AbstractModel):
         super().__init__()
         self.device = device
         self.model = smp.UnetPlusPlus(encoder_name="resnet50", encoder_weights=None,
-                             in_channels=weights.meta["in_chans"], classes=1,
-                             activation="sigmoid")
+                                      in_channels=3, classes=1,
+                                      activation="sigmoid")
         self.model.load_state_dict(torch.load(weights_path))
         self.model.to(self.device)
         self.model.eval()
@@ -45,16 +45,17 @@ class unetPlusPlusMOCO(AbstractModel):
         return self.postprocess(predictions)
 
 
-class unetPlusPlusMOCOEnsemble(AbstractModel):
+class UnetPlusPlusMOCOEnsemble(AbstractModel):
     def __init__(self, weights_paths: list, device: str = "cuda"):
         super().__init__()
         self.device = device
         self.models = []
         for weights_path in weights_paths:
-            self.models.append(unetPlusPlusMOCO(weights_path=weights_path, device=device))
+            self.models.append(
+                unetPlusPlusMOCO(weights_path=weights_path, device=device))
 
     def predict(self, image: np.ndarray) -> np.ndarray:
         outputs = []
         for model in self.models:
             outputs.append(model.predict(image))
-        return np.mean(outputs)
+        return np.mean(outputs, axis=0)

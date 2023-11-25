@@ -17,6 +17,8 @@ class Ensemble:
     def predict(self, image: np.ndarray) -> np.ndarray:
         predictions = [self.models[model_name].predict(image) for model_name in
                        self.models]
+        shapes = [prediction.shape for prediction in predictions]
+        assert len(set(shapes)) == 1, f"Predictions have different shapes: {shapes}"
         return np.average(predictions, axis=0, weights=self.weights)
 
     def __call__(self, image: np.ndarray) -> np.ndarray:
