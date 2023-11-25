@@ -7,6 +7,7 @@ from tqdm.notebook import tqdm
 from src.modelling.ensemble import Ensemble
 from src.modelling.metrics import f1_score
 from src.preprocessing.tile_generating import merge_tiles, split_image
+from yolov_preproc.contours import remove_mini_house
 
 
 class Predictor:
@@ -38,6 +39,7 @@ class Predictor:
             total_bg_score = 0
         for pred, mask in zip(predictions, masks):
             binary_pred = (pred > threshold).astype(np.int16)
+
             if calc_background:
                 bg_mask = 1 - mask
                 bg_pred = 1 - binary_pred
@@ -71,4 +73,7 @@ class ShiftedPredictor(Predictor):
                                       overlap=0)
         shifted_results = shifted_results[tile_size // 2:, tile_size // 2:]
         assert results.shape == shifted_results.shape
-        return (results + shifted_results) / 2
+        average_mask = (results + shifted_results) / 2
+        cleared = remove_mini_house(average_mask, 1000)
+        cleared = (cleared > 0.5).astype(np.int16)
+        return cleared
